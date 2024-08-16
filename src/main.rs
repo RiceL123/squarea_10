@@ -1,7 +1,9 @@
 use bevy::{
+    input::common_conditions::{input_just_pressed, input_pressed},
     prelude::*,
     sprite::Anchor,
     text::{BreakLineOn, Text2dBounds},
+    window::PrimaryWindow,
 };
 use rand::random;
 mod board;
@@ -10,6 +12,7 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_systems(Startup, init_board)
+        .add_systems(Update, handle_drag.run_if(input_pressed(MouseButton::Left)))
         .insert_resource(ClearColor(Color::srgb(1., 0.3, 0.4)))
         .run();
 }
@@ -33,7 +36,7 @@ pub struct Block;
 #[derive(Component)]
 pub struct ActiveBlock;
 
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct Tile;
 
 fn init_board(mut commands: Commands, asset_server: Res<AssetServer>) {
@@ -78,15 +81,18 @@ fn init_board(mut commands: Commands, asset_server: Res<AssetServer>) {
             );
 
             commands
-                .spawn(SpriteBundle {
-                    sprite: Sprite {
-                        color: Color::srgb(0.20, 0.3, 0.70),
-                        custom_size: Some(Vec2::new(TILE_SIZE, TILE_SIZE)),
+                .spawn((
+                    SpriteBundle {
+                        sprite: Sprite {
+                            color: Color::srgb(0.20, 0.3, 0.70),
+                            custom_size: Some(Vec2::new(TILE_SIZE, TILE_SIZE)),
+                            ..default()
+                        },
+                        transform: Transform::from_translation(pos.extend(0.0)),
                         ..default()
                     },
-                    transform: Transform::from_translation(pos.extend(0.0)),
-                    ..default()
-                })
+                    Tile,
+                ))
                 .with_children(|builder| {
                     builder.spawn(Text2dBundle {
                         text: Text::from_section(format!("{},{}", row, col), font.clone()),
@@ -94,6 +100,44 @@ fn init_board(mut commands: Commands, asset_server: Res<AssetServer>) {
                         ..default()
                     });
                 });
+        }
+    }
+}
+
+fn handle_drag(
+    mut commands: Commands,
+    mut tiles: Query<(Entity, &Transform, &mut Sprite), With<Tile>>,
+    windows: Query<&Window, With<PrimaryWindow>>,
+    camera_q: Query<(&Camera, &GlobalTransform), With<Camera2d>>,
+) {
+    let (camera, camera_transform) = camera_q.single();
+
+    if let Some(position) = windows
+        .single()
+        .cursor_position()
+        .and_then(|cursor| camera.viewport_to_world_2d(camera_transform, cursor))
+    {
+        println!("Cursor is inside the primary window, at {:?}", position);
+
+        for (entity, transform, mut sprite) in &mut tiles {
+            if (position.x >= transform.translation.x - (TILE_SIZE / 2.)
+                && position.x <= transform.translation.x + (TILE_SIZE / 2.))
+                && (position.y >= transform.translation.y - (TILE_SIZE / 2.)
+                    && position.y <= transform.translation.y + (TILE_SIZE / 2.))
+            {
+                println!(
+                    "{} >= {} >= {} && {} >= {} >= {}",
+                    transform.translation.x,
+                    position.x,
+                    transform.translation.x + TILE_SIZE,
+                    transform.translation.y,
+                    position.y,
+                    transform.translation.y + TILE_SIZE,
+                );
+                // println!("dragging deez nuts {:?} {:?}", entity, transform);
+                sprite.color = Color::srgb(1.0, 0.2, 0.7);
+                // commands.entity(entity).despawn_recursive();
+            }
         }
     }
 }
