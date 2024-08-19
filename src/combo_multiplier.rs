@@ -1,10 +1,10 @@
-use bevy::{
-    input::common_conditions::{input_just_pressed, input_just_released, input_pressed},
-    prelude::*,
+use bevy::prelude::{
+    default, App, Color, Commands, Plugin, Query, ResMut, Resource, Startup, Text, TextSection,
+    TextStyle, Trigger, With,
 };
 
-use crate::area_multiplier::{IntBounds, PrevArea};
-use crate::squarea_core::{PopTiles, Rectangle, Score, ScoreBoard, TILE_GAP, TILE_SIZE};
+use crate::conversions::{IntBounds, PrevArea};
+use crate::squarea_core::{PopTiles, Score, ScoreBoard};
 
 pub struct ComboMultiplier;
 
@@ -26,29 +26,10 @@ fn apply_combo_multiplier(
     trigger: Trigger<PopTiles>,
     prev_area: Query<&PrevArea>,
     mut combo: ResMut<Combo>,
-    mut commands: Commands,
     mut score: ResMut<Score>,
     mut score_board: Query<&mut Text, With<ScoreBoard>>,
 ) {
-    let mut bounds = IntBounds::default();
-
-    for (entity, pos) in trigger.event().0.iter() {
-        if pos.row < bounds.lower {
-            bounds.lower = pos.row
-        }
-
-        if pos.row > bounds.upper {
-            bounds.upper = pos.row
-        }
-
-        if pos.col < bounds.left {
-            bounds.left = pos.col
-        }
-
-        if pos.col > bounds.right {
-            bounds.right = pos.col
-        }
-    }
+    let bounds = IntBounds::from_positions(trigger.event().0.iter().map(|(_, p)| p).collect());
 
     let prev_area = prev_area.get_single().expect("no prev area");
 
@@ -56,13 +37,18 @@ fn apply_combo_multiplier(
 
     if intersect {
         combo.0 += 1;
-        score.value += combo.0;
+        let combo_bonus = match combo.0 {
+            0..6 => (combo.0 as f32).powf(1.5 as f32) as u32,
+            _ => combo.0 * 2,
+        };
+        // let combo_bonus = (combo.0 as f32).powf(1.5 as f32) as u32;
+        score.value += combo_bonus;
 
-        println!("combo: + {:?}", combo.0);
+        println!("combo: x{} (+{})", combo.0, combo_bonus);
 
         let mut text = score_board.single_mut();
         text.sections.push(TextSection {
-            value: format!("\ncombo: + {}", combo.0),
+            value: format!("\ncombo: x{} (+{})", combo.0, combo_bonus),
             style: TextStyle {
                 font_size: 20.,
                 color: Color::srgb(1., 0.7, 0.8),

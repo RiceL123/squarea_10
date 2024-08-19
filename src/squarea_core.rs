@@ -31,7 +31,7 @@ impl Plugin for SquareaCore {
 pub const ROWS: usize = 11;
 pub const COLS: usize = 15;
 
-pub const TILE_SIZE: f32 = 50.;
+pub const TILE_SIZE: f32 = 40.;
 pub const TILE_GAP: f32 = 10.;
 
 #[derive(Component, Debug)]
@@ -260,7 +260,6 @@ fn close_rectangle(
 
     *visibility = Visibility::Hidden;
 
-    // input_rectangle is anchored to the topRight, so offset it by
     let bounds = get_input_bounds(*rect_transform);
 
     let mut tiles_selected: Vec<_> = tiles
@@ -282,7 +281,7 @@ fn close_rectangle(
         commands.trigger(PopTiles(
             tiles_selected
                 .iter()
-                .map(|(e, t, _, tile)| (*e, tile.position.clone()))
+                .map(|(e, _, _, tile)| (*e, tile.position.clone()))
                 .collect(),
         ));
     } else {
