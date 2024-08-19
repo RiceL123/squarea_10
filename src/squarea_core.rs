@@ -15,14 +15,11 @@ impl Plugin for SquareaCore {
         app.add_systems(
             Update,
             (
-                (
-                    open_rectangle.run_if(input_just_pressed(MouseButton::Left)),
-                    extend_rectangle.run_if(input_pressed(MouseButton::Left)),
-                    close_rectangle.run_if(input_just_released(MouseButton::Left)),
-                )
-                    .chain(),
-                handle_reset.run_if(input_just_pressed(KeyCode::KeyR)),
-            ),
+                open_rectangle.run_if(input_just_pressed(MouseButton::Left)),
+                extend_rectangle.run_if(input_pressed(MouseButton::Left)),
+                close_rectangle.run_if(input_just_released(MouseButton::Left)),
+            )
+                .chain(),
         );
         app.add_event::<PopTiles>();
         app.observe(pop_tiles);
@@ -31,14 +28,17 @@ impl Plugin for SquareaCore {
     }
 }
 
-const ROWS: usize = 10;
-const COLS: usize = 10;
+pub const ROWS: usize = 11;
+pub const COLS: usize = 15;
 
 pub const TILE_SIZE: f32 = 50.;
 pub const TILE_GAP: f32 = 10.;
 
 #[derive(Component, Debug)]
-pub struct Tile(u8);
+pub struct Tile {
+    pub value: u8,
+    pub position: Position,
+}
 
 #[derive(Component)]
 pub struct Rectangle;
@@ -48,10 +48,10 @@ pub struct Score {
     pub value: u32,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Position {
-    pub x: f32,
-    pub y: f32,
+    pub row: u8,
+    pub col: u8,
 }
 
 #[derive(Component)]
@@ -96,7 +96,13 @@ fn init_board(mut commands: Commands, asset_server: Res<AssetServer>) {
                         transform: Transform::from_translation(pos.extend(0.0)),
                         ..default()
                     },
-                    Tile(val),
+                    Tile {
+                        value: val,
+                        position: Position {
+                            row: row as u8,
+                            col: col as u8,
+                        },
+                    },
                 ))
                 .with_children(|builder| {
                     builder.spawn(Text2dBundle {
@@ -172,7 +178,7 @@ fn open_rectangle(
     }
 }
 
-struct Bounds {
+pub struct Bounds {
     upper: f32,
     lower: f32,
     left: f32,
@@ -267,31 +273,22 @@ fn close_rectangle(
         })
         .collect();
 
-    if tiles_selected.iter().map(|(_, _, _, t)| t.0).sum::<u8>() == 10 {
+    if tiles_selected
+        .iter()
+        .map(|(_, _, _, t)| t.value)
+        .sum::<u8>()
+        == 10
+    {
         commands.trigger(PopTiles(
             tiles_selected
                 .iter()
-                .map(|(e, t, _, _)| {
-                    (
-                        *e,
-                        Position {
-                            x: t.translation.x,
-                            y: t.translation.y,
-                        },
-                    )
-                })
+                .map(|(e, t, _, tile)| (*e, tile.position.clone()))
                 .collect(),
         ));
     } else {
         for (_, _, ref mut s, _) in &mut tiles_selected {
             s.color = Color::srgb(0.20, 0.3, 0.70);
         }
-    }
-}
-
-fn handle_reset(mut tiles: Query<(Entity, &Transform, &mut Sprite), With<Tile>>) {
-    for (_, _, mut sprite) in &mut tiles {
-        sprite.color = Color::srgb(0.20, 0.3, 0.70);
     }
 }
 
@@ -302,11 +299,12 @@ fn pop_tiles(
     mut score_board: Query<&mut Text, With<ScoreBoard>>,
 ) {
     for (entity, pos) in trigger.event().0.iter() {
-        println!("{:?}", pos);
+        // println!("{:?}", pos);
         commands.entity(*entity).despawn_recursive();
         score.value += 1;
     }
 
+    println!("tile pop: + {}", trigger.event().0.len());
     let mut text = score_board.single_mut();
 
     text.sections[1].value = score.value.to_string();

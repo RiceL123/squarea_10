@@ -1,4 +1,5 @@
 use core::f32;
+use std::u8;
 
 use bevy::{
     input::common_conditions::{input_just_pressed, input_just_released, input_pressed},
@@ -7,7 +8,9 @@ use bevy::{
     window::PrimaryWindow,
 };
 
-use crate::squarea_core::{PopTiles, Score, ScoreBoard, TILE_GAP, TILE_SIZE};
+use crate::squarea_core::{
+    Bounds, PopTiles, Position, Score, ScoreBoard, COLS, ROWS, TILE_GAP, TILE_SIZE,
+};
 pub struct AreaMultiplier;
 
 impl Plugin for AreaMultiplier {
@@ -17,8 +20,41 @@ impl Plugin for AreaMultiplier {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct IntBounds {
+    pub upper: u8,
+    pub lower: u8,
+    pub left: u8,
+    pub right: u8,
+}
+
+impl Default for IntBounds {
+    fn default() -> Self {
+        IntBounds {
+            upper: u8::MIN,
+            lower: u8::MAX,
+            left: u8::MAX,
+            right: u8::MIN,
+        }
+    }
+}
+
+impl IntBounds {
+    pub fn intersect(&self, other: &IntBounds) -> bool {
+        if self.right < other.left || other.right < self.left {
+            return false;
+        }
+
+        if self.upper < other.lower || other.upper < self.lower {
+            return false;
+        }
+
+        true
+    }
+}
+
 #[derive(Component)]
-pub struct PrevArea;
+pub struct PrevArea(pub IntBounds);
 
 fn setup_area(mut commands: Commands) {
     commands.spawn((
@@ -35,7 +71,7 @@ fn setup_area(mut commands: Commands) {
             visibility: Visibility::Hidden,
             ..default()
         },
-        PrevArea,
+        PrevArea(IntBounds::default()),
     ));
 }
 
@@ -44,70 +80,55 @@ fn apply_area_multiplier(
     mut commands: Commands,
     mut score: ResMut<Score>,
     mut score_board: Query<&mut Text, With<ScoreBoard>>,
-    mut prev_area: Query<(&mut Transform, &mut Visibility), With<PrevArea>>,
+    mut prev_area: Query<(&mut Transform, &mut Visibility, &mut PrevArea)>,
 ) {
-    let mut left_bound = f32::MAX;
-    let mut right_bound = f32::MIN;
-    let mut lower_bound = f32::MAX;
-    let mut upper_bound = f32::MIN;
+    let mut bounds = IntBounds::default();
 
     for (entity, pos) in trigger.event().0.iter() {
-        if pos.x < left_bound {
-            left_bound = pos.x
+        if pos.row < bounds.lower {
+            bounds.lower = pos.row
         }
 
-        if pos.x > right_bound {
-            right_bound = pos.x
+        if pos.row > bounds.upper {
+            bounds.upper = pos.row
         }
 
-        if pos.y < lower_bound {
-            lower_bound = pos.y
+        if pos.col < bounds.left {
+            bounds.left = pos.col
         }
 
-        if pos.y > upper_bound {
-            upper_bound = pos.y
+        if pos.col > bounds.right {
+            bounds.right = pos.col
         }
     }
 
-    let height = if upper_bound - lower_bound == 0. {
-        1.
-    } else {
-        upper_bound - lower_bound
-    };
+    let height = bounds.right - bounds.left + 1;
+    let width = bounds.upper - bounds.lower + 1;
+    let area = height * width;
 
-    let width = if right_bound - left_bound == 0. {
-        1.
-    } else {
-        right_bound - left_bound
-    };
-
-    let area = height * width / (TILE_SIZE + TILE_GAP) + 1.;
-    println!("area multiplier {area}",);
+    println!("area multiplier: + {area}");
     score.value += area as u32;
 
-    let (mut prev_area_transform, mut visibility) =
+    let (mut prev_area_transform, mut visibility, mut prev_area) =
         prev_area.get_single_mut().expect("no prev area ggs");
+
     prev_area_transform.translation = Vec3::new(
-        (left_bound + right_bound) / 2.,
-        (lower_bound + upper_bound) / 2.,
+        (0.5 + (bounds.right + bounds.left) as f32 / 2. - (COLS as f32 / 2.))
+            * (TILE_SIZE + TILE_GAP),
+        (0.5 + (bounds.upper + bounds.lower) as f32 / 2. - (ROWS as f32 / 2.))
+            * (TILE_SIZE + TILE_GAP),
         1.,
     );
 
     prev_area_transform.scale = Vec3::new(
-        if width == 1. {
-            TILE_SIZE + TILE_GAP
-        } else {
-            width + (TILE_SIZE + TILE_GAP)
-        },
-        if height == 1. {
-            TILE_SIZE + TILE_GAP
-        } else {
-            height + (TILE_SIZE + TILE_GAP)
-        },
+        height as f32 * (TILE_SIZE + TILE_GAP),
+        width as f32 * (TILE_SIZE + TILE_GAP),
         1.,
     );
 
     *visibility = Visibility::Visible;
+
+    prev_area.0 = bounds;
 
     let mut text = score_board.single_mut();
     text.sections[1].value = score.value.to_string();
