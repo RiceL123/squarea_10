@@ -1,11 +1,23 @@
+use std::time::Duration;
+
 use bevy::{
     input::common_conditions::{input_just_pressed, input_just_released, input_pressed},
     prelude::*,
     sprite::Anchor,
+    time::common_conditions::on_timer,
     window::PrimaryWindow,
 };
 
+use crate::conversions::RectBounds;
 use rand::{thread_rng, Rng};
+
+#[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash)]
+enum GameModeState {
+    #[default]
+    NotInGame,
+    NormalMode,
+    ZenMode,
+}
 
 pub struct SquareaCore;
 
@@ -23,8 +35,11 @@ impl Plugin for SquareaCore {
         );
         app.add_event::<PopTiles>();
         app.observe(pop_tiles);
-        app.insert_resource(Time::<Fixed>::from_seconds(2.));
-        app.add_systems(FixedUpdate, refresh_scoreboard);
+        // app.insert_resource(Time::<Fixed>::from_seconds(2.));
+        app.add_systems(
+            Update,
+            refresh_scoreboard.run_if(on_timer(Duration::from_secs(2))),
+        );
     }
 }
 
@@ -178,38 +193,6 @@ fn open_rectangle(
     }
 }
 
-pub struct Bounds {
-    upper: f32,
-    lower: f32,
-    left: f32,
-    right: f32,
-}
-
-fn get_input_bounds(rect_transform: Transform) -> Bounds {
-    let (left_bound, right_bound) = match (
-        rect_transform.translation.x,
-        rect_transform.translation.x - rect_transform.scale.x,
-    ) {
-        (a, b) if a < b => (b, a),
-        (a, b) => (a, b),
-    };
-
-    let (lower_bound, upper_bound) = match (
-        rect_transform.translation.y,
-        rect_transform.translation.y - rect_transform.scale.y,
-    ) {
-        (a, b) if a < b => (b, a),
-        (a, b) => (a, b),
-    };
-
-    return Bounds {
-        upper: upper_bound,
-        lower: lower_bound,
-        left: left_bound,
-        right: right_bound,
-    };
-}
-
 fn extend_rectangle(
     mut rectangle: Query<(&mut Visibility, &mut Transform), With<Rectangle>>,
     mut tiles: Query<(&Tile, &Transform, &mut Sprite), Without<Rectangle>>,
@@ -229,17 +212,12 @@ fn extend_rectangle(
             1.0,
         );
 
-        // input_rectangle is anchored to the topRight, so offset it by
-        let bounds = get_input_bounds(*rect_transform);
+        let bounds = RectBounds::new(&rect_transform);
 
         tiles
             .iter_mut()
             .for_each(|(_, tile_transform, mut sprite)| {
-                if tile_transform.translation.x <= bounds.left
-                    && tile_transform.translation.x >= bounds.right
-                    && tile_transform.translation.y <= bounds.lower
-                    && tile_transform.translation.y >= bounds.upper
-                {
+                if bounds.contains(tile_transform) {
                     sprite.color = Color::srgb(0.20, 0.8, 0.70)
                 } else {
                     sprite.color = Color::srgb(0.20, 0.3, 0.70)
@@ -260,23 +238,19 @@ fn close_rectangle(
 
     *visibility = Visibility::Hidden;
 
-    let bounds = get_input_bounds(*rect_transform);
+    let bounds = RectBounds::new(&rect_transform);
 
     let mut tiles_selected: Vec<_> = tiles
         .iter_mut()
-        .filter(|(_, tile_transform, _, _)| {
-            tile_transform.translation.x <= bounds.left
-                && tile_transform.translation.x >= bounds.right
-                && tile_transform.translation.y <= bounds.lower
-                && tile_transform.translation.y >= bounds.upper
-        })
+        .filter(|(_, tile_transform, _, _)| bounds.contains(tile_transform))
         .collect();
 
-    if tiles_selected
-        .iter()
-        .map(|(_, _, _, t)| t.value)
-        .sum::<u8>()
-        == 10
+    if tiles_selected.len() < 10
+        && tiles_selected
+            .iter()
+            .map(|(_, _, _, t)| t.value)
+            .sum::<u8>()
+            == 10
     {
         commands.trigger(PopTiles(
             tiles_selected
@@ -299,6 +273,7 @@ fn pop_tiles(
 ) {
     for (entity, pos) in trigger.event().0.iter() {
         // println!("{:?}", pos);
+
         commands.entity(*entity).despawn_recursive();
         score.value += 1;
     }
@@ -320,7 +295,7 @@ fn pop_tiles(
 
 fn refresh_scoreboard(mut score_board: Query<&mut Text, With<ScoreBoard>>) {
     let mut text = score_board.single_mut();
-    if text.sections.len() > 4 {
+    if text.sections.len() > 10 {
         text.sections.remove(2);
     }
 }

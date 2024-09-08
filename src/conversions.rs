@@ -1,4 +1,7 @@
-use bevy::{math::Vec2, prelude::Component};
+use bevy::{
+    math::Vec2,
+    prelude::{Component, Transform},
+};
 
 use crate::squarea_core::{Position, COLS, ROWS, TILE_GAP, TILE_SIZE};
 
@@ -77,3 +80,44 @@ impl IntBounds {
 
 #[derive(Component)]
 pub struct PrevArea(pub IntBounds);
+
+pub struct RectBounds {
+    upper: f32,
+    lower: f32,
+    left: f32,
+    right: f32,
+}
+
+impl RectBounds {
+    pub fn new(rect_transform: &Transform) -> Self {
+        let (left_bound, right_bound) = match (
+            rect_transform.translation.x,
+            rect_transform.translation.x - rect_transform.scale.x,
+        ) {
+            (a, b) if a < b => (b, a),
+            (a, b) => (a, b),
+        };
+
+        let (lower_bound, upper_bound) = match (
+            rect_transform.translation.y,
+            rect_transform.translation.y - rect_transform.scale.y,
+        ) {
+            (a, b) if a < b => (b, a),
+            (a, b) => (a, b),
+        };
+
+        return RectBounds {
+            upper: upper_bound,
+            lower: lower_bound,
+            left: left_bound,
+            right: right_bound,
+        };
+    }
+
+    pub fn contains(&self, transform_object: &Transform) -> bool {
+        transform_object.translation.x <= self.left
+            && transform_object.translation.x >= self.right
+            && transform_object.translation.y <= self.lower
+            && transform_object.translation.y >= self.upper
+    }
+}
