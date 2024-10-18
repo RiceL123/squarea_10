@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{default, time::Duration};
 
 use bevy::{
     input::common_conditions::{input_just_pressed, input_just_released, input_pressed},
@@ -8,22 +8,14 @@ use bevy::{
     window::PrimaryWindow,
 };
 
-use crate::conversions::RectBounds;
+use crate::{conversions::RectBounds, GameState};
 use rand::{thread_rng, Rng};
-
-#[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash)]
-enum GameModeState {
-    #[default]
-    NotInGame,
-    NormalMode,
-    ZenMode,
-}
 
 pub struct SquareaCore;
 
 impl Plugin for SquareaCore {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, init_board);
+        app.add_systems(OnEnter(GameState::InGame), (cleanup_board, init_board));
         app.add_systems(
             Update,
             (
@@ -31,14 +23,14 @@ impl Plugin for SquareaCore {
                 extend_rectangle.run_if(input_pressed(MouseButton::Left)),
                 close_rectangle.run_if(input_just_released(MouseButton::Left)),
             )
-                .chain(),
+                .chain()
+                .run_if(in_state(GameState::InGame)),
         );
         app.add_event::<PopTiles>();
         app.observe(pop_tiles);
-        // app.insert_resource(Time::<Fixed>::from_seconds(2.));
         app.add_systems(
             Update,
-            refresh_scoreboard.run_if(on_timer(Duration::from_secs(2))),
+            refresh_scoreboard.run_if(on_timer(Duration::from_secs(3))),
         );
     }
 }
@@ -48,6 +40,9 @@ pub const COLS: usize = 15;
 
 pub const TILE_SIZE: f32 = 40.;
 pub const TILE_GAP: f32 = 10.;
+
+#[derive(Component)]
+struct CleanUp;
 
 #[derive(Component, Debug)]
 pub struct Tile {
@@ -75,10 +70,13 @@ pub struct ScoreBoard;
 #[derive(Event)]
 pub struct PopTiles(pub Vec<(Entity, Position)>);
 
-fn init_board(mut commands: Commands, asset_server: Res<AssetServer>) {
-    //camera
-    commands.spawn(Camera2dBundle::default());
+fn cleanup_board(mut commands: Commands, cleanup: Query<Entity, With<CleanUp>>) {
+    for e in cleanup.iter() {
+        commands.entity(e).despawn_recursive();
+    }
+}
 
+fn init_board(mut commands: Commands, asset_server: Res<AssetServer>) {
     // text
     let font = asset_server.load("fonts/font.ttf");
     let font = TextStyle {
@@ -118,6 +116,7 @@ fn init_board(mut commands: Commands, asset_server: Res<AssetServer>) {
                             col: col as u8,
                         },
                     },
+                    CleanUp,
                 ))
                 .with_children(|builder| {
                     builder.spawn(Text2dBundle {
@@ -145,10 +144,12 @@ fn init_board(mut commands: Commands, asset_server: Res<AssetServer>) {
             ..default()
         },
         Rectangle,
+        CleanUp,
     ));
 
     commands.insert_resource(Score { value: 0 });
     commands.spawn((
+        CleanUp,
         ScoreBoard,
         TextBundle::from_sections([
             TextSection::new(
@@ -185,11 +186,10 @@ fn open_rectangle(
         .cursor_position()
         .and_then(|cursor| camera.viewport_to_world_2d(camera_transform, cursor))
     {
-        let (mut visibility, mut transform) =
-            rectangle.get_single_mut().expect("ggs no input rect lmao");
-
-        transform.translation = position.extend(1.0);
-        *visibility = Visibility::Visible;
+        if let Ok((mut visibility, mut transform)) = rectangle.get_single_mut() {
+            transform.translation = position.extend(1.0);
+            *visibility = Visibility::Visible;
+        }
     }
 }
 
@@ -205,26 +205,27 @@ fn extend_rectangle(
         .cursor_position()
         .and_then(|cursor| camera.viewport_to_world_2d(camera_transform, cursor))
     {
-        let (_, mut rect_transform) = rectangle.get_single_mut().expect("ggs no input rect lmao");
-        rect_transform.scale = Vec3::new(
-            rect_transform.translation.x - position.x,
-            rect_transform.translation.y - position.y,
-            1.0,
-        );
+        if let Ok((mut visibility, mut transform)) = rectangle.get_single_mut() {
+            transform.scale = Vec3::new(
+                transform.translation.x - position.x,
+                transform.translation.y - position.y,
+                1.0,
+            );
 
-        let bounds = RectBounds::new(&rect_transform);
+            let bounds = RectBounds::new(&transform);
 
-        tiles
-            .iter_mut()
-            .for_each(|(_, tile_transform, mut sprite)| {
-                if bounds.contains(tile_transform) {
-                    sprite.color = Color::srgb(0.20, 0.8, 0.70)
-                } else {
-                    sprite.color = Color::srgb(0.20, 0.3, 0.70)
-                }
-            });
+            tiles
+                .iter_mut()
+                .for_each(|(_, tile_transform, mut sprite)| {
+                    if bounds.contains(tile_transform) {
+                        sprite.color = Color::srgb(0.20, 0.8, 0.70)
+                    } else {
+                        sprite.color = Color::srgb(0.20, 0.3, 0.70)
+                    }
+                });
 
-        // *visibility = Visibility::Visible;
+            // *visibility = Visibility::Visible;
+        }
     }
 }
 
@@ -233,34 +234,33 @@ fn close_rectangle(
     mut rectangle: Query<(&mut Visibility, &mut Transform), With<Rectangle>>,
     mut tiles: Query<(Entity, &Transform, &mut Sprite, &Tile), Without<Rectangle>>,
 ) {
-    let (mut visibility, rect_transform) =
-        rectangle.get_single_mut().expect("ggs no input rect lmao");
+    if let Ok((mut visibility, transform)) = rectangle.get_single_mut() {
+        *visibility = Visibility::Hidden;
 
-    *visibility = Visibility::Hidden;
+        let bounds = RectBounds::new(&transform);
 
-    let bounds = RectBounds::new(&rect_transform);
+        let mut tiles_selected: Vec<_> = tiles
+            .iter_mut()
+            .filter(|(_, tile_transform, _, _)| bounds.contains(tile_transform))
+            .collect();
 
-    let mut tiles_selected: Vec<_> = tiles
-        .iter_mut()
-        .filter(|(_, tile_transform, _, _)| bounds.contains(tile_transform))
-        .collect();
-
-    if tiles_selected.len() < 10
-        && tiles_selected
-            .iter()
-            .map(|(_, _, _, t)| t.value)
-            .sum::<u8>()
-            == 10
-    {
-        commands.trigger(PopTiles(
-            tiles_selected
+        if tiles_selected.len() < 10
+            && tiles_selected
                 .iter()
-                .map(|(e, _, _, tile)| (*e, tile.position.clone()))
-                .collect(),
-        ));
-    } else {
-        for (_, _, ref mut s, _) in &mut tiles_selected {
-            s.color = Color::srgb(0.20, 0.3, 0.70);
+                .map(|(_, _, _, t)| t.value)
+                .sum::<u8>()
+                == 10
+        {
+            commands.trigger(PopTiles(
+                tiles_selected
+                    .iter()
+                    .map(|(e, _, _, tile)| (*e, tile.position.clone()))
+                    .collect(),
+            ));
+        } else {
+            for (_, _, ref mut s, _) in &mut tiles_selected {
+                s.color = Color::srgb(0.20, 0.3, 0.70);
+            }
         }
     }
 }
@@ -272,30 +272,30 @@ fn pop_tiles(
     mut score_board: Query<&mut Text, With<ScoreBoard>>,
 ) {
     for (entity, pos) in trigger.event().0.iter() {
-        // println!("{:?}", pos);
-
         commands.entity(*entity).despawn_recursive();
         score.value += 1;
     }
 
-    println!("tile pop: + {}", trigger.event().0.len());
-    let mut text = score_board.single_mut();
+    // println!("tile pop: + {}", trigger.event().0.len());
 
-    text.sections[1].value = score.value.to_string();
+    if let Ok(mut text) = score_board.get_single_mut() {
+        text.sections[1].value = score.value.to_string();
 
-    text.sections.push(TextSection {
-        value: format!("\ntiles popped: + {}", trigger.event().0.len()),
-        style: TextStyle {
-            font_size: 20.,
-            color: Color::srgb(1., 0.7, 0.8),
-            ..default()
-        },
-    });
+        text.sections.push(TextSection {
+            value: format!("\ntiles popped: + {}", trigger.event().0.len()),
+            style: TextStyle {
+                font_size: 20.,
+                color: Color::srgb(1., 0.7, 0.8),
+                ..default()
+            },
+        });
+    }
 }
 
 fn refresh_scoreboard(mut score_board: Query<&mut Text, With<ScoreBoard>>) {
-    let mut text = score_board.single_mut();
-    if text.sections.len() > 10 {
-        text.sections.remove(2);
+    if let Ok(mut text) = score_board.get_single_mut() {
+        if text.sections.len() > 10 {
+            text.sections.remove(2);
+        }
     }
 }

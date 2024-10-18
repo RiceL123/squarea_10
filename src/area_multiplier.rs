@@ -1,15 +1,17 @@
 use bevy::prelude::{
-    default, App, Color, Commands, Plugin, Query, ResMut, Sprite, SpriteBundle, Startup, Text,
-    TextSection, TextStyle, Transform, Trigger, Vec3, Visibility, With,
+    default, App, Color, Commands, OnEnter, Plugin, Query, ResMut, Sprite, SpriteBundle, Startup,
+    Text, TextSection, TextStyle, Transform, Trigger, Vec3, Visibility, With,
 };
 
 use crate::conversions::{IntBounds, PrevArea};
 use crate::squarea_core::{PopTiles, Score, ScoreBoard, TILE_GAP, TILE_SIZE};
+use crate::GameState;
 pub struct AreaMultiplier;
 
 impl Plugin for AreaMultiplier {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, setup_area);
+        app.add_systems(OnEnter(GameState::InGame), clean_up);
         app.observe(apply_area_multiplier);
     }
 }
@@ -33,6 +35,12 @@ fn setup_area(mut commands: Commands) {
     ));
 }
 
+fn clean_up(mut prev_area: Query<&mut Transform, With<PrevArea>>) {
+    if let Ok(mut transform) = prev_area.get_single_mut() {
+        transform.scale = Vec3::new(0., 0., 1.);
+    }
+}
+
 fn apply_area_multiplier(
     trigger: Trigger<PopTiles>,
     mut score: ResMut<Score>,
@@ -45,7 +53,7 @@ fn apply_area_multiplier(
     let height = bounds.upper - bounds.lower + 1;
     let area = height * width;
 
-    println!("area multiplier: + {area}");
+    // println!("area multiplier: + {area}");
     score.value += area as u32;
 
     let (mut prev_area_transform, mut visibility, mut prev_area) =

@@ -44,7 +44,7 @@ fn apply_combo_multiplier(
         // let combo_bonus = (combo.0 as f32).powf(1.5 as f32) as u32;
         score.value += combo_bonus;
 
-        println!("combo: x{} (+{})", combo.0, combo_bonus);
+        // println!("combo: x{} (+{})", combo.0, combo_bonus);
 
         let mut text = score_board.single_mut();
         text.sections.push(TextSection {

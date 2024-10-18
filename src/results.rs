@@ -1,21 +1,25 @@
 use bevy::prelude::*;
 
-use crate::{sound::HitEvent, GameState};
+use crate::{sound::HitEvent, squarea_core::Score, GameState};
 
-pub struct Menu;
+pub struct Results;
 
-impl Plugin for Menu {
+impl Plugin for Results {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, load_menu);
-        app.add_systems(Update, (play_button_system, quit_button_system));
+        app.add_systems(OnEnter(GameState::Results), get_score);
+        app.add_systems(Update, (retry_button_system, mainmenu_button_system));
     }
 }
 
 #[derive(Component)]
-pub struct MenuNode;
+pub struct ResultsNode;
 
 #[derive(Component)]
-struct PlayButton;
+pub struct ScoreText;
+
+#[derive(Component)]
+struct RetryButton;
 
 #[derive(Component)]
 struct QuitButton;
@@ -23,10 +27,10 @@ struct QuitButton;
 fn load_menu(mut commands: Commands) {
     commands
         .spawn((
-            MenuNode,
+            ResultsNode,
             NodeBundle {
                 style: Style {
-                    display: Display::Flex,
+                    display: Display::None,
                     flex_direction: FlexDirection::Column,
                     align_items: AlignItems::Center,
                     justify_content: JustifyContent::Center,
@@ -35,15 +39,20 @@ fn load_menu(mut commands: Commands) {
                     width: Val::Percent(100.),
                     ..default()
                 },
-                z_index: ZIndex::Global(50),
-                background_color: Color::srgb(0., 0.2, 0.2).into(),
+                z_index: ZIndex::Global(100),
+                background_color: Color::srgba(0.1, 0., 0.1, 0.3).into(),
                 ..default()
             },
         ))
         .with_children(|parent| {
+            parent.spawn((
+                ScoreText,
+                TextBundle::from_section("Score: ", TextStyle { ..default() }),
+            ));
+
             parent
                 .spawn((
-                    PlayButton,
+                    RetryButton,
                     ButtonBundle {
                         style: Style {
                             width: Val::Px(300.0),
@@ -56,12 +65,12 @@ fn load_menu(mut commands: Commands) {
                         },
                         border_color: BorderColor(Color::BLACK),
                         border_radius: BorderRadius::all(Val::Px(10.)),
-                        background_color: Color::srgb(0.1, 0.1, 0.1).into(),
+                        background_color: Color::srgba(0.1, 0.1, 0.1, 0.8).into(),
                         ..default()
                     },
                 ))
                 .with_children(|button| {
-                    button.spawn(TextBundle::from_section("play", TextStyle { ..default() }));
+                    button.spawn(TextBundle::from_section("retry", TextStyle { ..default() }));
                 });
 
             parent
@@ -79,21 +88,21 @@ fn load_menu(mut commands: Commands) {
                         },
                         border_color: BorderColor(Color::BLACK),
                         border_radius: BorderRadius::all(Val::Px(10.)),
-                        background_color: Color::srgb(0.1, 0.1, 0.1).into(),
+                        background_color: Color::srgba(0.1, 0.1, 0.1, 0.8).into(),
                         ..default()
                     },
                 ))
                 .with_children(|button| {
-                    button.spawn(TextBundle::from_section("quit", TextStyle { ..default() }));
+                    button.spawn(TextBundle::from_section("menu", TextStyle { ..default() }));
                 });
         });
 }
 
-fn play_button_system(
+fn retry_button_system(
     mut game_state: ResMut<NextState<GameState>>,
     mut interaction_query: Query<
         (&Interaction, &mut BorderColor),
-        (Changed<Interaction>, With<PlayButton>),
+        (Changed<Interaction>, With<RetryButton>),
     >,
     mut play_sfx: EventWriter<HitEvent>,
 ) {
@@ -113,24 +122,32 @@ fn play_button_system(
     }
 }
 
-fn quit_button_system(
+fn mainmenu_button_system(
+    mut game_state: ResMut<NextState<GameState>>,
     mut interaction_query: Query<
         (&Interaction, &mut BorderColor),
         (Changed<Interaction>, With<QuitButton>),
     >,
-    mut exit: EventWriter<AppExit>,
+    mut play_sfx: EventWriter<HitEvent>,
 ) {
     if let Ok(query) = &mut interaction_query.get_single_mut() {
         match *query.0 {
             Interaction::Pressed => {
-                exit.send(AppExit::Success);
+                game_state.set(GameState::MainMenu);
+                play_sfx.send(HitEvent(1));
             }
             Interaction::Hovered => {
-                query.1 .0 = Color::srgb(0.9, 0.2, 0.2);
+                query.1 .0 = Color::srgb(0.2, 0.2, 0.9);
             }
             _ => {
                 query.1 .0 = Color::srgb(0.9, 0.9, 0.9);
             }
         }
+    }
+}
+
+fn get_score(score: Res<Score>, mut scpre_text: Query<&mut Text, With<ScoreText>>) {
+    if let Ok(mut x) = scpre_text.get_single_mut() {
+        x.sections[0].value = format!("Score: {}", score.value);
     }
 }
