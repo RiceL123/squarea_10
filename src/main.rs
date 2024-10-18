@@ -1,14 +1,4 @@
-use bevy::{
-    input::common_conditions::input_just_pressed,
-    prelude::*,
-    // prelude::{
-    //     in_state, App, AppExtStates, ClearColor, Color, DefaultPlugins, IntoSystemConfigs,
-    //     KeyCode, OnEnter, OnExit, Query, ResMut, States, Style, Update,
-    //     With,
-    // },
-    ui::Display,
-    winit::WinitSettings,
-};
+use bevy::{input::common_conditions::input_just_pressed, prelude::*, ui::Display};
 use menu::MenuNode;
 use results::ResultsNode;
 use sound::HitEvent;

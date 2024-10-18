@@ -7,7 +7,7 @@ pub struct Results;
 impl Plugin for Results {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, load_menu);
-        app.add_systems(OnEnter(GameState::Results), get_score);
+        app.add_systems(OnEnter(GameState::Results), enter_results);
         app.add_systems(Update, (retry_button_system, mainmenu_button_system));
     }
 }
@@ -146,8 +146,19 @@ fn mainmenu_button_system(
     }
 }
 
-fn get_score(score: Res<Score>, mut scpre_text: Query<&mut Text, With<ScoreText>>) {
+fn enter_results(
+    mut commands: Commands,
+    score: Res<Score>,
+    mut scpre_text: Query<&mut Text, With<ScoreText>>,
+    asset_server: Res<AssetServer>,
+) {
     if let Ok(mut x) = scpre_text.get_single_mut() {
         x.sections[0].value = format!("Score: {}", score.value);
     }
+
+    commands.spawn((AudioBundle {
+        source: asset_server.load("finished.ogg"),
+        settings: PlaybackSettings::DESPAWN,
+        ..default()
+    },));
 }

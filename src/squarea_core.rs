@@ -36,7 +36,7 @@ impl Plugin for SquareaCore {
 }
 
 pub const ROWS: usize = 11;
-pub const COLS: usize = 15;
+pub const COLS: usize = 18;
 
 pub const TILE_SIZE: f32 = 40.;
 pub const TILE_GAP: f32 = 10.;
@@ -272,7 +272,7 @@ fn pop_tiles(
     mut score_board: Query<&mut Text, With<ScoreBoard>>,
 ) {
     for (entity, pos) in trigger.event().0.iter() {
-        commands.entity(*entity).despawn_recursive();
+        // commands.entity(*entity).despawn_recursive(); // animation will despawn the tile
         score.value += 1;
     }
 

@@ -13,7 +13,6 @@ impl Plugin for SquareaTimer {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, setup_timer);
         app.add_systems(OnEnter(GameState::InGame), restart_timer);
-        // app.add_systems(OnExit(GameState::InGame), restart_timer);
         app.add_systems(Update, count_timer.run_if(in_state(GameState::InGame)));
     }
 }

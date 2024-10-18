@@ -196,6 +196,7 @@ fn toggle_bgm(
 
 use bevy::input::mouse::MouseWheel;
 
+use crate::conversions::IntBounds;
 use crate::squarea_core::PopTiles;
 
 fn change_volume(
@@ -296,6 +297,56 @@ fn button_system(
     }
 }
 
-fn write_sfx_event(trigger: Trigger<PopTiles>, mut ev_writer: EventWriter<HitEvent>) {
-    ev_writer.send(HitEvent(trigger.event().0.iter().count() as i32));
+fn write_sfx_event(
+    trigger: Trigger<PopTiles>,
+    mut commands: Commands,
+    mut ev_writer: EventWriter<HitEvent>,
+    asset_server: Res<AssetServer>,
+    audio: Res<Audio>,
+) {
+    // ev_writer.send(HitEvent(trigger.event().0.iter().count() as i32));
+
+    let bounds = IntBounds::from_positions(trigger.event().0.iter().map(|(_, p)| p).collect());
+
+    let width = bounds.right - bounds.left + 1;
+    let height = bounds.upper - bounds.lower + 1;
+    let area = height * width;
+
+    match area {
+        0..3 => {
+            commands.spawn(AudioBundle {
+                source: asset_server.load("sounds/area1.ogg"),
+                settings: PlaybackSettings::DESPAWN.with_volume(Volume::new(audio.volume)),
+                ..default()
+            });
+        }
+        3..6 => {
+            commands.spawn(AudioBundle {
+                source: asset_server.load("sounds/area2.ogg"),
+                settings: PlaybackSettings::DESPAWN.with_volume(Volume::new(audio.volume)),
+                ..default()
+            });
+        }
+        6..9 => {
+            commands.spawn(AudioBundle {
+                source: asset_server.load("sounds/area3.ogg"),
+                settings: PlaybackSettings::DESPAWN.with_volume(Volume::new(audio.volume)),
+                ..default()
+            });
+        }
+        9..16 => {
+            commands.spawn(AudioBundle {
+                source: asset_server.load("sounds/area4.ogg"),
+                settings: PlaybackSettings::DESPAWN.with_volume(Volume::new(audio.volume)),
+                ..default()
+            });
+        }
+        _ => {
+            commands.spawn(AudioBundle {
+                source: asset_server.load("sounds/area5.ogg"),
+                settings: PlaybackSettings::DESPAWN.with_volume(Volume::new(audio.volume)),
+                ..default()
+            });
+        }
+    }
 }
