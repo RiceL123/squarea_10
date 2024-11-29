@@ -1,5 +1,7 @@
 # Squarea_10
 
+![cover](/assets/squarea-chan.png)
+
 Clear tiles in a rectangle that add up to 10.
 
 The scoring system is calculated by

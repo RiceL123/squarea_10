@@ -1,89 +1,40 @@
-use bevy::{input::common_conditions::input_just_pressed, prelude::*, ui::Display};
-use menu::MenuNode;
-use results::ResultsNode;
-use sound::HitEvent;
+use bevy::prelude::*;
 
-#[derive(States, Debug, Default, Clone, PartialEq, Eq, Hash)]
-pub enum GameState {
-    #[default]
-    MainMenu,
-    InGame,
-    Results,
-}
-
-mod animate_tiles;
-mod area_multiplier;
-mod combo_multiplier;
-mod conversions;
+mod splash;
 mod menu;
-mod results;
-mod sound;
-mod squarea_core;
-mod timer;
+mod game;
+
+
+#[derive(Clone, Copy, Default, Eq, PartialEq, Debug, Hash, States)]
+pub enum SystemState {
+    Splash,
+    #[default]
+    Menu,
+    Game,
+}
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins)
-        .init_state::<GameState>()
-        .add_systems(Startup, init_game)
-        .add_plugins(squarea_core::SquareaCore)
-        .add_plugins(combo_multiplier::ComboMultiplier)
-        .add_plugins(area_multiplier::AreaMultiplier)
-        .add_plugins(animate_tiles::AnimateTiles)
-        .add_plugins(timer::SquareaTimer)
-        .add_plugins(menu::Menu)
-        .add_plugins(results::Results)
-        .add_plugins(sound::Sound)
-        .add_systems(OnEnter(GameState::MainMenu), show_menu)
-        .add_systems(OnExit(GameState::MainMenu), hide_menu)
-        .add_systems(OnEnter(GameState::Results), show_results)
-        .add_systems(OnExit(GameState::Results), hide_results)
-        .add_systems(
-            Update,
-            toggle_game_state.run_if(input_just_pressed(KeyCode::Escape)),
-        )
-        .insert_resource(ClearColor(Color::srgb(0.99, 0.5, 0.5)))
+        .add_plugins(DefaultPlugins.set(WindowPlugin {
+            primary_window: Some(Window {
+                title: "Squaregg".to_string(),
+                ..default()
+            }),
+            ..default()
+        }))
+        .init_state::<SystemState>()
+        .add_systems(Startup, setup)
+        .add_plugins((splash::splash_plugin, menu::menu_plugin, game::game_plugin))
         .run();
 }
 
-fn init_game(mut commands: Commands) {
+fn setup(mut commands: Commands) {
     commands.spawn(Camera2dBundle::default());
 }
 
-fn show_menu(mut menu: Query<&mut Style, With<MenuNode>>) {
-    if let Ok(x) = &mut menu.get_single_mut() {
-        x.display = Display::Flex;
-    };
-}
-
-fn hide_menu(mut menu: Query<&mut Style, With<MenuNode>>) {
-    if let Ok(x) = &mut menu.get_single_mut() {
-        x.display = Display::None;
-    };
-}
-
-fn show_results(mut results: Query<&mut Style, With<ResultsNode>>) {
-    if let Ok(x) = &mut results.get_single_mut() {
-        x.display = Display::Flex;
-    };
-}
-
-fn hide_results(mut results: Query<&mut Style, With<ResultsNode>>) {
-    if let Ok(x) = &mut results.get_single_mut() {
-        x.display = Display::None;
-    };
-}
-
-fn toggle_game_state(
-    state: Res<State<GameState>>,
-    mut next_state: ResMut<NextState<GameState>>,
-    mut ev_writer: EventWriter<HitEvent>,
-) {
-    match state.get() {
-        GameState::InGame => next_state.set(GameState::MainMenu),
-        GameState::Results => next_state.set(GameState::MainMenu),
-        GameState::MainMenu => next_state.set(GameState::InGame),
+// Generic system that takes a component as a parameter, and will despawn all entities with that component
+pub fn despawn_screen<T: Component>(to_despawn: Query<Entity, With<T>>, mut commands: Commands) {
+    for entity in &to_despawn {
+        commands.entity(entity).despawn_recursive();
     }
-
-    ev_writer.send(HitEvent(1));
 }
