@@ -28,7 +28,7 @@ fn game_ui_setup(
     asset_server: Res<AssetServer>,
     internal_game_state: Res<InternalGameState>,
 ) {
-    // let icon = asset_server.load("squarea-chan.png");
+    // let icon = asset_server.load("squaregg-chan.png");
     // // Display the logo
     // commands
     //     .spawn((

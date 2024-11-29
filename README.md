@@ -1,6 +1,6 @@
 # Squarea_10
 
-![cover](/assets/squarea-chan.png)
+![cover](/assets/squaregg-chan.png)
 
 Clear tiles in a rectangle that add up to 10.
 

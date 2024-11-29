@@ -24,7 +24,7 @@ struct OnSplashScreen;
 struct SplashTimer(Timer);
 
 fn splash_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
-    let icon = asset_server.load("squarea-chan.png");
+    let icon = asset_server.load("squaregg-chan.png");
     // Display the logo
     commands
         .spawn((
