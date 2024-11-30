@@ -42,19 +42,25 @@ impl RectBounds {
             && transform_object.translation.y >= self.upper
     }
 
-    pub fn area_to_rectbounds(area: Area, config: Res<GameConfig>) {
-        let translation = Vec2::new(
-            (0.5 + (area.right + area.left) as f32 / 2. - (COLS as f32 / 2.))
-                * (config.tile_size + config.tile_gap),
-            (0.5 + (area.upper + area.lower) as f32 / 2. - (ROWS as f32 / 2.))
-                * (config.tile_size + config.tile_gap),
-        );
-        
-        let scale = Vec2::new(
-            (area.right - area.left + 1) as f32 * (config.tile_size + config.tile_gap),
-            (area.upper - area.lower + 1) as f32 * (config.tile_size + config.tile_gap),
-        );
+}
 
-        }
+pub fn area_to_transform(area: &Area, config: Res<GameConfig>) -> Transform {
+    let translation = Vec2::new(
+        (0.5 + (area.right + area.left) as f32 / 2. - (COLS as f32 / 2.))
+            * (config.tile_size + config.tile_gap),
+        (0.5 + (area.upper + area.lower) as f32 / 2. - (ROWS as f32 / 2.))
+            * (config.tile_size + config.tile_gap),
+    );
+    
+    let scale = Vec2::new(
+        (area.right - area.left + 1) as f32 * (config.tile_size + config.tile_gap),
+        (area.upper - area.lower + 1) as f32 * (config.tile_size + config.tile_gap),
+    );
+
+    Transform {
+        translation: translation.extend(1.),
+        scale: scale.extend(1.),
+        ..Default::default()
+    }
 }
 

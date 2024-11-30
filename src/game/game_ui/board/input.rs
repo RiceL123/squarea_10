@@ -1,8 +1,12 @@
-use bevy::{input::common_conditions::{input_just_pressed, input_just_released, input_pressed}, prelude::*, window::PrimaryWindow};
+use bevy::{
+    input::common_conditions::{input_just_pressed, input_just_released, input_pressed},
+    prelude::*,
+    window::PrimaryWindow,
+};
 
 use crate::game::{squaregg::Position, GameState, InternalGameState};
 
-use super::{conversions::RectBounds, Rectangle, Tile};
+use super::{animate_tiles::StartTileAnimationEvent, conversions::RectBounds, Rectangle, Tile};
 
 pub fn input_plugin(app: &mut App) {
     app.add_systems(
@@ -16,7 +20,6 @@ pub fn input_plugin(app: &mut App) {
             .run_if(in_state(GameState::Playing)),
     );
 }
-
 
 fn open_rectangle(
     mut rectangle: Query<(&mut Visibility, &mut Transform), With<Rectangle>>,
@@ -73,22 +76,23 @@ fn extend_rectangle(
 }
 
 fn close_rectangle(
-    mut commands: Commands,
+    commands: Commands,
     mut rectangle: Query<(&mut Visibility, &mut Transform), With<Rectangle>>,
     mut tiles: Query<(Entity, &Transform, &mut Sprite, &Tile), Without<Rectangle>>,
     mut internal_game_state: ResMut<InternalGameState>,
+    mut ev_writer: EventWriter<StartTileAnimationEvent>,
 ) {
     if let Ok((mut visibility, transform)) = rectangle.get_single_mut() {
         *visibility = Visibility::Hidden;
 
         let bounds = RectBounds::new(&transform);
 
-        let tiles_selected: Vec<_> = tiles
+        let mut tiles_selected: Vec<_> = tiles
             .iter_mut()
             .filter(|(_, tile_transform, _, _)| bounds.contains(tile_transform))
             .collect();
 
-        if let Ok(prev_area) = internal_game_state.0.try_pop_tiles(
+        match internal_game_state.0.try_pop_tiles(
             &tiles_selected
                 .iter()
                 .map(|(_, _, _, tile)| Position {
@@ -96,14 +100,31 @@ fn close_rectangle(
                     col: tile.col as usize,
                 })
                 .collect(),
+            commands,
         ) {
-            println!("hello");
+            true => {
+                // set selected tiles to animating on popped state
+                ev_writer.send(StartTileAnimationEvent(
+                    tiles_selected
+                        .iter()
+                        .map(|(entity, transform, _, _)| (*entity, **transform))
+                        .collect(),
+                ));
 
-            tiles_selected.iter().for_each(|(e, _, _, _)| {
-                commands.entity(*e).despawn_recursive();
-            });
+                // start_tile_animation(
+                //     commands,
+                //     tiles_selected
+                //         .iter_mut()
+                //         .map(|(entity, transform, _, _)| (*entity, &mut **transform))
+                //         .collect(),
+                // );
+            }
+            false => {
+                // set selected tiles back to default state
+                tiles_selected
+                    .iter_mut()
+                    .for_each(|(_, _, sprite, _)| sprite.color = Color::WHITE);
+            }
         }
-
-        println!("{:?}", internal_game_state.0);
     }
 }

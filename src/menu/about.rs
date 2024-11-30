@@ -2,7 +2,7 @@ use ::bevy::prelude::*;
 
 use crate::despawn_screen;
 
-use super::{background, default_text_style, spawn_button, MenuButtonAction, MenuState};
+use super::{default_text_style, spawn_button, MenuButtonAction, MenuState};
 
 pub fn about_plugin(app: &mut App) {
     app.add_systems(OnEnter(MenuState::About), about_setup)
@@ -30,4 +30,20 @@ fn about_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         });
 }
 
-
+fn background() -> NodeBundle {
+    NodeBundle {
+        style: Style {
+            display: Display::Flex,
+            flex_direction: FlexDirection::Column,
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::Center,
+            row_gap: Val::Px(20.),
+            height: Val::Percent(100.),
+            width: Val::Percent(100.),
+            ..Default::default()
+        },
+        z_index: ZIndex::Global(i32::MIN),
+        background_color: Color::srgba(0., 0.2, 0.2, 0.0).into(),
+        ..Default::default()
+    }
+}

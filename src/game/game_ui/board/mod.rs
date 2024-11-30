@@ -1,21 +1,23 @@
-use bevy::input::common_conditions::{input_just_pressed, input_just_released, input_pressed};
 use bevy::prelude::*;
 use bevy::sprite::Anchor;
+use conversions::area_to_transform;
 
+use crate::game::playing::TilesPoppedEvent;
 use crate::game::squaregg::{Position, COLS, ROWS};
 use crate::game::GameState;
 use crate::menu::settings::GameConfig;
 use crate::{game::InternalGameState, SystemState};
 
-mod input;
 mod animate_tiles;
 mod conversions;
+mod input;
 
 pub fn board_plugin(app: &mut App) {
     // if board_setup scheduled on OnEnter(SystemState::Playing), tiles might render previous board
-    app.add_systems(OnEnter(GameState::Playing), board_setup) 
+    app.add_systems(OnEnter(GameState::Playing), board_setup)
         .add_systems(OnExit(GameState::Playing), board_cleanup)
-        .add_plugins((input::input_plugin, animate_tiles::animate_plugin));
+        .add_plugins((input::input_plugin, animate_tiles::animate_plugin))
+        .observe(observe_poptiles_event);
 }
 
 #[derive(Component)]
@@ -151,5 +153,25 @@ fn board_cleanup(
 
     for entity in &prev_rectangle_query {
         commands.entity(entity).despawn_recursive();
+    }
+}
+
+fn observe_poptiles_event(
+    trigger: Trigger<TilesPoppedEvent>,
+    commands: Commands,
+    internal_game_state: Res<InternalGameState>,
+    config: Res<GameConfig>,
+    mut prev_area: Query<(&mut Transform, &mut Visibility), With<PrevRectangle>>,
+) {
+    // despawn popped tile information is just row and column info
+    // must be converted to rendered entities where we inject an animation flag
+    // trigger.event().tiles.iter().for_each(|pos| {
+    //     commands.
+    // });
+
+    // draw new prev area
+    if let Ok((mut prev_area_transform, mut prev_area_visibility)) = prev_area.get_single_mut() {
+        *prev_area_visibility = Visibility::Visible;
+        *prev_area_transform = area_to_transform(&internal_game_state.0.prev_area, config);
     }
 }
