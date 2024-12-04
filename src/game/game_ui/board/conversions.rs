@@ -44,7 +44,7 @@ impl RectBounds {
 
 }
 
-pub fn area_to_transform(area: &Area, config: Res<GameConfig>) -> Transform {
+pub fn area_to_transform(area: &Area, config: &Res<GameConfig>) -> Transform {
     let translation = Vec2::new(
         (0.5 + (area.right + area.left) as f32 / 2. - (COLS as f32 / 2.))
             * (config.tile_size + config.tile_gap),

@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 
-use crate::{despawn_screen, SystemState};
+use crate::despawn_screen;
 
-use super::{squaregg::{Area, Position}, GameState};
+use super::{squaregg::Position, GameState};
 
 pub fn playing_plugin(app: &mut App) {
     app.add_systems(OnEnter(GameState::Playing), game_playing_setup)
@@ -18,6 +18,6 @@ pub struct TilesPoppedEvent {
     pub tiles: Vec<Position>
 }
 
-fn game_playing_setup(mut commands: Commands) {
+fn game_playing_setup(commands: Commands) {
 
 }

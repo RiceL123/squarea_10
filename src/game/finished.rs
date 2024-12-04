@@ -28,26 +28,26 @@ fn game_finished_setup(mut commands: Commands) {
         });
 }
 
-fn background() -> NodeBundle {
-    NodeBundle {
-        style: Style {
+fn background() -> (Node, ZIndex, BackgroundColor) {
+    (
+        Node {
             display: Display::Flex,
             flex_direction: FlexDirection::Column,
             align_items: AlignItems::Center,
             justify_content: JustifyContent::Center,
-            row_gap: Val::Px(40.),
+            row_gap: Val::Px(20.),
             height: Val::Percent(100.),
             width: Val::Percent(100.),
+
             ..Default::default()
         },
-        z_index: ZIndex::Global(50),
-        background_color: Color::srgb(0., 0.2, 0.2).into(),
-        ..Default::default()
-    }
+        ZIndex(50),
+        BackgroundColor(Color::srgba(0., 0.2, 0.2, 0.2)),
+    )
 }
 
 fn spawn_score(parent: &mut ChildBuilder<'_>) {
-    parent.spawn(TextBundle::from_section("good job?? or bad job nice", TextStyle { ..default() }));
+    parent.spawn(Text::new("good job?? or bad job nice"));
 }
 
 // All actions that can be triggered from a button click
@@ -70,12 +70,12 @@ const PRESSED_BUTTON: Color = Color::srgb(0.35, 0.75, 0.35);
 // This system handles changing all buttons color based on mouse interaction
 fn button_system(
     mut interaction_query: Query<
-        (&Interaction, &mut UiImage, Option<&SelectedOption>),
+        (&Interaction, &mut BackgroundColor, Option<&SelectedOption>),
         (Changed<Interaction>, With<Button>),
     >,
 ) {
     for (interaction, mut image, selected) in &mut interaction_query {
-        image.color = match (*interaction, selected) {
+        image.0 = match (*interaction, selected) {
             (Interaction::Pressed, _) | (Interaction::None, Some(_)) => PRESSED_BUTTON,
             (Interaction::Hovered, Some(_)) => HOVERED_PRESSED_BUTTON,
             (Interaction::Hovered, None) => HOVERED_BUTTON,

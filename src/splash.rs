@@ -24,32 +24,21 @@ struct OnSplashScreen;
 struct SplashTimer(Timer);
 
 fn splash_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
-    let icon = asset_server.load("squaregg-chan.png");
+    let background = asset_server.load("squaregg-chan.png");
     // Display the logo
     commands
         .spawn((
-            NodeBundle {
-                style: Style {
-                    align_items: AlignItems::Center,
-                    justify_content: JustifyContent::Center,
-                    width: Val::Percent(100.0),
-                    height: Val::Percent(100.0),
-                    ..default()
-                },
+            Node {
+                align_items: AlignItems::Center,
+                justify_content: JustifyContent::Center,
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
                 ..default()
             },
             OnSplashScreen,
         ))
         .with_children(|parent| {
-            parent.spawn(ImageBundle {
-                style: Style {
-                    // This will set the logo to be width, and auto adjust its height
-                    width: Val::Px(700.0),
-                    ..default()
-                },
-                image: UiImage::new(icon),
-                ..default()
-            });
+            parent.spawn(ImageNode::new(background));
         });
     // Insert the timer as a resource
     commands.insert_resource(SplashTimer(Timer::from_seconds(3.0, TimerMode::Once)));

@@ -32,7 +32,7 @@ fn main() {
 }
 
 fn setup(mut commands: Commands) {
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn(Camera2d::default());
 }
 
 // Generic system that takes a component as a parameter, and will despawn all entities with that component

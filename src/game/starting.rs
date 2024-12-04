@@ -28,29 +28,25 @@ fn game_starting_setup(mut commands: Commands) {
     commands.insert_resource(StartingTimer(Timer::from_seconds(3.0, TimerMode::Once)));
 }
 
-fn background() -> NodeBundle {
-    NodeBundle {
-        style: Style {
+fn background() -> (Node, BackgroundColor) {
+    (
+        Node {
             display: Display::Flex,
             flex_direction: FlexDirection::Column,
             align_items: AlignItems::Center,
             justify_content: JustifyContent::Center,
-            row_gap: Val::Px(40.),
+            row_gap: Val::Px(20.),
             height: Val::Percent(100.),
             width: Val::Percent(100.),
+
             ..Default::default()
         },
-        z_index: ZIndex::Global(50),
-        // background_color: Color::srgb(0., 0.2, 0.2).into(),
-        ..Default::default()
-    }
+        BackgroundColor(Color::srgba(0., 0.2, 0.2, 0.0)),
+    )
 }
 
 fn spawn_count_down(parent: &mut ChildBuilder<'_>) {
-    parent.spawn(TextBundle::from_section(
-        "starting!!!",
-        TextStyle { ..default() },
-    ));
+    parent.spawn(Text::new("Starting!!!"));
 }
 
 fn go_main_menu(mut system_state: ResMut<NextState<SystemState>>) {

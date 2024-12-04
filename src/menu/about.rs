@@ -30,9 +30,9 @@ fn about_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         });
 }
 
-fn background() -> NodeBundle {
-    NodeBundle {
-        style: Style {
+fn background() -> (Node, ZIndex, BackgroundColor) {
+    (
+        Node {
             display: Display::Flex,
             flex_direction: FlexDirection::Column,
             align_items: AlignItems::Center,
@@ -40,10 +40,10 @@ fn background() -> NodeBundle {
             row_gap: Val::Px(20.),
             height: Val::Percent(100.),
             width: Val::Percent(100.),
+
             ..Default::default()
         },
-        z_index: ZIndex::Global(i32::MIN),
-        background_color: Color::srgba(0., 0.2, 0.2, 0.0).into(),
-        ..Default::default()
-    }
+        ZIndex(i32::MIN),
+        BackgroundColor(Color::srgba(0., 0.2, 0.2, 0.0)),
+    )
 }

@@ -3,10 +3,10 @@ use bevy::sprite::Anchor;
 use conversions::area_to_transform;
 
 use crate::game::playing::TilesPoppedEvent;
-use crate::game::squaregg::{Position, COLS, ROWS};
+use crate::game::squaregg::{COLS, ROWS};
 use crate::game::GameState;
 use crate::menu::settings::GameConfig;
-use crate::{game::InternalGameState, SystemState};
+use crate::game::InternalGameState;
 
 mod animate_tiles;
 mod conversions;
@@ -17,7 +17,8 @@ pub fn board_plugin(app: &mut App) {
     app.add_systems(OnEnter(GameState::Playing), board_setup)
         .add_systems(OnExit(GameState::Playing), board_cleanup)
         .add_plugins((input::input_plugin, animate_tiles::animate_plugin))
-        .observe(observe_poptiles_event);
+        // .add_observer(observe_poptiles_event);
+        .add_systems(Update, observe_poptiles_event);
 }
 
 #[derive(Component)]
@@ -67,35 +68,47 @@ fn spawn_tiles(
 
                     commands
                         .spawn((
-                            SpriteBundle {
-                                sprite: Sprite {
-                                    custom_size: Some(Vec2::new(
-                                        config.tile_size,
-                                        config.tile_size,
-                                    )),
-                                    color: Color::hsl(0.2, 0.2, 0.9),
-                                    ..default()
-                                },
-                                transform: Transform::from_translation(pos.extend(0.0)),
-                                ..default()
-                            },
+                            Sprite::from_color(Color::hsl(0.2, 0.2, 0.9), Vec2::new(
+                                config.tile_size,
+                                config.tile_size,
+                            )),
+                            Transform::from_translation(pos.extend(0.0)),
+                            // SpriteBundle {
+                            //     sprite: Sprite {
+                            //         custom_size: Some(Vec2::new(
+                            //             config.tile_size,
+                            //             config.tile_size,
+                            //         )),
+                            //         color: Color::hsl(0.2, 0.2, 0.9),
+                            //         ..default()
+                            //     },
+                            //     transform: Transform::from_translation(pos.extend(0.0)),
+                            //     ..default()
+                            // },
                             Tile {
                                 row: row_index as i32,
                                 col: col_index as i32,
                             },
                         ))
                         .with_children(|builder| {
-                            builder.spawn(Text2dBundle {
-                                text: Text::from_section(
-                                    format!("{}", val),
-                                    TextStyle {
-                                        color: config.tile_text_color,
-                                        ..default()
-                                    },
+                            builder.spawn(
+                                (
+                                    Text2d::new(val.to_string()),
+                                    TextColor(config.tile_text_color),
+                                    Transform::from_xyz(0., 0., 1.)
                                 ),
-                                transform: Transform::from_translation(Vec3::new(0., 0., 1.)),
-                                ..default()
-                            });
+                                // Text2dBundle {
+                                //     text: Text::from_section(
+                                //         format!("{}", val),
+                                //         TextStyle {
+                                //             color: config.tile_text_color,
+                                //             ..default()
+                                //         },
+                                //     ),
+                                //     transform: Transform::from_translation(Vec3::new(0., 0., 1.)),
+                                //     ..default()
+                                // }
+                            );
                         });
                 }
             });
@@ -104,35 +117,42 @@ fn spawn_tiles(
 
 fn spawn_rectangle(commands: &mut Commands) {
     commands.spawn((
-        SpriteBundle {
-            transform: Transform {
-                translation: Vec3::new(0.0, 0.0, 0.0),
-                scale: Vec3::new(500., 500., 1.0),
-                ..default()
-            },
-            sprite: Sprite {
-                color: Color::srgba(0.9, 0.8, 0.7, 0.2),
-                anchor: Anchor::TopRight,
-                ..default()
-            },
-            visibility: Visibility::Hidden,
-            ..default()
-        },
+        // SpriteBundle {
+        //     transform: Transform {
+        //         translation: Vec3::new(0.0, 0.0, 0.0),
+        //         scale: Vec3::new(500., 500., 1.0),
+        //         ..default()
+        //     },
+        //     sprite: Sprite {
+        //         color: Color::srgba(0.9, 0.8, 0.7, 0.2),
+        //         anchor: Anchor::TopRight,
+        //         ..default()
+        //     },
+        //     visibility: Visibility::Hidden,
+        //     ..default()
+        // },
+        Sprite::from_color(Color::srgba(0.9, 0.8, 0.7, 0.2), Vec2::new(500., 500.)),
+        Transform::from_xyz(0., 0., 3.),
+        Visibility::Hidden,
+        Anchor::TopRight,
         Rectangle,
     ));
 }
 
 fn spawn_prev_rectangle(commands: &mut Commands) {
     commands.spawn((
-        SpriteBundle {
-            transform: Transform::from_xyz(0., 0., 1.).with_scale(Vec3::new(0., 0., 1.)),
-            sprite: Sprite {
-                color: Color::srgba(0.9, 0.8, 0.2, 0.2),
-                ..default()
-            },
-            visibility: Visibility::Hidden,
-            ..default()
-        },
+        // SpriteBundle {
+        //     transform: Transform::from_xyz(0., 0., 1.).with_scale(Vec3::new(0., 0., 1.)),
+        //     sprite: Sprite {
+        //         color: Color::srgba(0.9, 0.8, 0.2, 0.2),
+        //         ..default()
+        //     },
+        //     visibility: Visibility::Hidden,
+        //     ..default()
+        // },
+        Sprite::from_color(Color::srgba(0.9, 0.8, 0.7, 0.2), Vec2::new(0., 0.)),
+        Transform::from_xyz(0., 0., 2.),
+        Visibility::Hidden,
         PrevRectangle,
     ));
 }
@@ -157,8 +177,9 @@ fn board_cleanup(
 }
 
 fn observe_poptiles_event(
-    trigger: Trigger<TilesPoppedEvent>,
-    commands: Commands,
+    mut ev_reader: EventReader<TilesPoppedEvent>,
+    // trigger: Trigger<TilesPoppedEvent>,
+    // commands: Commands,
     internal_game_state: Res<InternalGameState>,
     config: Res<GameConfig>,
     mut prev_area: Query<(&mut Transform, &mut Visibility), With<PrevRectangle>>,
@@ -170,8 +191,10 @@ fn observe_poptiles_event(
     // });
 
     // draw new prev area
-    if let Ok((mut prev_area_transform, mut prev_area_visibility)) = prev_area.get_single_mut() {
-        *prev_area_visibility = Visibility::Visible;
-        *prev_area_transform = area_to_transform(&internal_game_state.0.prev_area, config);
+    for _ in ev_reader.read() {
+        if let Ok((mut prev_area_transform, mut prev_area_visibility)) = prev_area.get_single_mut() {
+            *prev_area_visibility = Visibility::Visible;
+            *prev_area_transform = area_to_transform(&internal_game_state.0.prev_area, &config);
+        }
     }
 }

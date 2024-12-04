@@ -1,7 +1,7 @@
 use bevy::{input::common_conditions::input_just_pressed, prelude::*};
 use squaregg::Squaregg;
 
-use crate::{despawn_screen, SystemState};
+use crate::SystemState;
 
 mod squaregg; // internal game board state
 
@@ -41,7 +41,7 @@ enum GameState {
 pub struct InternalGameState(Squaregg);
 
 fn game_setup(
-    mut commands: Commands,
+    commands: Commands,
     mut menu_state: ResMut<NextState<GameState>>,
     mut internal_game_state: ResMut<InternalGameState>,
 ) {

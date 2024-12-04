@@ -4,7 +4,7 @@ use bevy::{
     window::PrimaryWindow,
 };
 
-use crate::game::{squaregg::Position, GameState, InternalGameState};
+use crate::game::{playing::TilesPoppedEvent, squaregg::Position, GameState, InternalGameState};
 
 use super::{animate_tiles::StartTileAnimationEvent, conversions::RectBounds, Rectangle, Tile};
 
@@ -30,7 +30,7 @@ fn open_rectangle(
     if let Some(position) = windows
         .single()
         .cursor_position()
-        .and_then(|cursor| camera.viewport_to_world_2d(camera_transform, cursor))
+        .and_then(|cursor| camera.viewport_to_world_2d(camera_transform, cursor).ok())
     {
         if let Ok((mut visibility, mut transform)) = rectangle.get_single_mut() {
             transform.translation = position.extend(1.0);
@@ -49,7 +49,7 @@ fn extend_rectangle(
     if let Some(position) = windows
         .single()
         .cursor_position()
-        .and_then(|cursor| camera.viewport_to_world_2d(camera_transform, cursor))
+        .and_then(|cursor| camera.viewport_to_world_2d(camera_transform, cursor).ok())
     {
         if let Ok((_, mut transform)) = rectangle.get_single_mut() {
             transform.scale = Vec3::new(
@@ -76,7 +76,8 @@ fn extend_rectangle(
 }
 
 fn close_rectangle(
-    commands: Commands,
+    ev_writer_poptiles : EventWriter<TilesPoppedEvent>,
+    // commands: Commands,
     mut rectangle: Query<(&mut Visibility, &mut Transform), With<Rectangle>>,
     mut tiles: Query<(Entity, &Transform, &mut Sprite, &Tile), Without<Rectangle>>,
     mut internal_game_state: ResMut<InternalGameState>,
@@ -92,6 +93,14 @@ fn close_rectangle(
             .filter(|(_, tile_transform, _, _)| bounds.contains(tile_transform))
             .collect();
 
+        if tiles_selected.len() > 10 {
+            // set selected tiles back to default state
+            tiles_selected
+                .iter_mut()
+                .for_each(|(_, _, sprite, _)| sprite.color = Color::WHITE);
+            return;
+        }
+
         match internal_game_state.0.try_pop_tiles(
             &tiles_selected
                 .iter()
@@ -100,7 +109,8 @@ fn close_rectangle(
                     col: tile.col as usize,
                 })
                 .collect(),
-            commands,
+            // commands,
+            ev_writer_poptiles
         ) {
             true => {
                 // set selected tiles to animating on popped state
@@ -110,14 +120,6 @@ fn close_rectangle(
                         .map(|(entity, transform, _, _)| (*entity, **transform))
                         .collect(),
                 ));
-
-                // start_tile_animation(
-                //     commands,
-                //     tiles_selected
-                //         .iter_mut()
-                //         .map(|(entity, transform, _, _)| (*entity, &mut **transform))
-                //         .collect(),
-                // );
             }
             false => {
                 // set selected tiles back to default state

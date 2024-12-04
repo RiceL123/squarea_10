@@ -146,7 +146,7 @@ fn menu_action(
                 game_state,
                 selected_button,
                 menu,
-                commands
+                commands,
             );
             return;
         }
@@ -161,7 +161,7 @@ pub fn apply_menu_action(
     mut game_state: ResMut<NextState<SystemState>>,
     mut selected_button: Query<&mut SelectionButton>,
     menu: Query<Entity, With<OnMainMenuScreen>>,
-    commands: Commands
+    commands: Commands,
 ) {
     match menu_button_action {
         MenuButtonAction::Quit => {
@@ -193,105 +193,131 @@ pub fn apply_menu_action(
 }
 
 pub fn spawn_button(parent: &mut ChildBuilder<'_>, component: impl Component, text: &str) {
-    parent.spawn((component, button())).with_children(|button| {
-        button.spawn(default_text_style(text));
-    });
+    parent
+        .spawn((
+            component,
+            Button,
+            Node {
+                width: Val::Px(300.0),
+                height: Val::Px(80.0),
+                border: UiRect::all(Val::Px(5.0)),
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                padding: UiRect::all(Val::Px(5.)),
+                ..default()
+            },
+            BorderColor(Color::BLACK),
+            BorderRadius::all(Val::Px(10.)),
+        ))
+        .with_child(default_text_style(text));
 }
 
-fn background() -> NodeBundle {
-    NodeBundle {
-        style: Style {
-            display: Display::Flex,
-            flex_direction: FlexDirection::Row,
-            align_items: AlignItems::Center,
-            justify_content: JustifyContent::Center,
-            column_gap: Val::Px(40.),
-            height: Val::Percent(100.),
-            width: Val::Percent(100.),
-            ..Default::default()
-        },
-        z_index: ZIndex::Global(i32::MIN),
-        background_color: Color::srgba(0., 0.2, 0.2, 0.0).into(),
-        ..Default::default()
-    }
-}
-
-fn menu_art_container() -> NodeBundle {
-    NodeBundle {
-        style: Style {
-            display: Display::Flex,
-            align_items: AlignItems::Center,
-            justify_content: JustifyContent::Center,
-            column_gap: Val::Px(40.),
-            height: Val::Percent(100.),
-            width: Val::Percent(40.),
-            ..Default::default()
-        },
-        z_index: ZIndex::Global(i32::MIN),
-        background_color: Color::srgb(0.2, 0.0, 0.2).into(),
-        ..Default::default()
-    }
-}
-
-fn cover_image(images: Res<MenuImages>) -> ImageBundle {
-    ImageBundle {
-        image: UiImage {
-            texture: images.squarea_chan.clone(),
-            color: Color::default().with_alpha(0.9),
-            ..default()
-        },
-        style: Style {
-            height: Val::Percent(100.),
-            width: Val::Auto,
-            ..Default::default()
-        },
-        ..Default::default()
-    }
-}
-
-fn buttons_container() -> NodeBundle {
-    NodeBundle {
-        style: Style {
-            display: Display::Flex,
-            flex_direction: FlexDirection::Column,
-            align_items: AlignItems::Center,
-            justify_content: JustifyContent::Center,
-            row_gap: Val::Px(40.),
-            height: Val::Percent(100.),
-            width: Val::Auto,
-            ..Default::default()
-        },
-        ..Default::default()
-    }
-}
-
-pub fn button() -> ButtonBundle {
-    ButtonBundle {
-        style: Style {
-            width: Val::Px(300.0),
-            height: Val::Px(80.0),
-            border: UiRect::all(Val::Px(5.0)),
-            justify_content: JustifyContent::Center,
-            align_items: AlignItems::Center,
-            padding: UiRect::all(Val::Px(5.)),
-            ..default()
-        },
-        border_color: BorderColor(Color::BLACK),
-        border_radius: BorderRadius::all(Val::Px(10.)),
-        background_color: Color::srgb(0.1, 0.1, 0.1).into(),
+fn background() -> Node {
+    Node {
+        display: Display::Flex,
+        flex_direction: FlexDirection::Row,
+        align_items: AlignItems::Center,
+        justify_content: JustifyContent::Center,
+        column_gap: Val::Px(40.),
+        height: Val::Percent(100.),
+        width: Val::Percent(100.),
         ..default()
     }
 }
 
-fn default_text_style(text: &str) -> TextBundle {
-    TextBundle::from_section(text, TextStyle { ..default() })
+// fn background() -> NodeBundle {
+//     NodeBundle {
+//         style: Style {
+//             display: Display::Flex,
+//             flex_direction: FlexDirection::Row,
+//             align_items: AlignItems::Center,
+//             justify_content: JustifyContent::Center,
+//             column_gap: Val::Px(40.),
+//             height: Val::Percent(100.),
+//             width: Val::Percent(100.),
+//             ..Default::default()
+//         },
+//         z_index: ZIndex::Global(i32::MIN),
+//         background_color: Color::srgba(0., 0.2, 0.2, 0.0).into(),
+//         ..Default::default()
+//     }
+// }
+
+fn menu_art_container() -> Node {
+    Node {
+        display: Display::Flex,
+        align_items: AlignItems::Center,
+        justify_content: JustifyContent::Center,
+        column_gap: Val::Px(40.),
+        height: Val::Percent(100.),
+        width: Val::Percent(40.),
+        ..Default::default()
+    }
+}
+
+// fn menu_art_container() -> NodeBundle {
+//     NodeBundle {
+//         style: Style {
+//             display: Display::Flex,
+//             align_items: AlignItems::Center,
+//             justify_content: JustifyContent::Center,
+//             column_gap: Val::Px(40.),
+//             height: Val::Percent(100.),
+//             width: Val::Percent(40.),
+//             ..Default::default()
+//         },
+//         z_index: ZIndex::Global(i32::MIN),
+//         background_color: Color::srgb(0.2, 0.0, 0.2).into(),
+//         ..Default::default()
+//     }
+// }
+
+fn cover_image(images: Res<MenuImages>) -> (ImageNode, Node) {
+    (
+        ImageNode::new(images.squarea_chan.clone()),
+        Node {
+            height: Val::Percent(100.),
+            ..default()
+        },
+    )
+
+    // ImageBundle {
+    //     image: UiImage {
+    //         texture: images.squarea_chan.clone(),
+    //         color: Color::default().with_alpha(0.9),
+    //         ..default()
+    //     },
+    //     style: Style {
+    //         height: Val::Percent(100.),
+    //         width: Val::Auto,
+    //         ..Default::default()
+    //     },
+    //     ..Default::default()
+    // }
+}
+
+fn buttons_container() -> Node {
+    Node {
+        display: Display::Flex,
+        flex_direction: FlexDirection::Column,
+        align_items: AlignItems::Center,
+        justify_content: JustifyContent::Center,
+        row_gap: Val::Px(40.),
+        height: Val::Percent(100.),
+        width: Val::Auto,
+        ..Default::default()
+    }
+}
+
+fn default_text_style(text: &str) -> Text {
+    Text::new(text)
 }
 
 fn menu_intro_animation(
     time: Res<Time>,
     mut timer: ResMut<MenuIntroSequenceTimer>,
-    mut bg_query: Query<&mut Style, (Without<ButtonContainer>, With<BackgroundImage>)>,
-    mut buttons_query: Query<&mut Style, (With<ButtonContainer>, Without<BackgroundImage>)>,
+    mut bg_query: Query<&mut Node, (Without<ButtonContainer>, With<BackgroundImage>)>,
+    mut buttons_query: Query<&mut Node, (With<ButtonContainer>, Without<BackgroundImage>)>,
     mut menu_state: ResMut<NextState<MenuState>>,
     mut commands: Commands,
 ) {

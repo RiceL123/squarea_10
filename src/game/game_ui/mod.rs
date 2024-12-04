@@ -9,8 +9,8 @@ mod options;
 mod score;
 mod timer;
 
-#[derive(Component)]
-pub struct OnGameUI;
+// #[derive(Component)]
+// pub struct OnGameUI;
 
 pub fn game_ui_plugin(app: &mut App) {
     app.add_plugins((
@@ -18,13 +18,13 @@ pub fn game_ui_plugin(app: &mut App) {
         score::score_plugin,
         timer::timer_plugin,
         options::options_plugin,
-    ))
-    .add_systems(OnEnter(SystemState::Game), game_ui_setup)
-    .add_systems(OnExit(SystemState::Game), despawn_screen::<OnGameUI>);
+    ));
+    // .add_systems(OnEnter(SystemState::Game), game_ui_setup)
+    // .add_systems(OnExit(SystemState::Game), despawn_screen::<OnGameUI>);
 }
 
 fn game_ui_setup(
-    mut commands: Commands,
+    commands: Commands,
     asset_server: Res<AssetServer>,
     internal_game_state: Res<InternalGameState>,
 ) {

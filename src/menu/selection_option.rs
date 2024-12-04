@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::{despawn_screen, SystemState};
 
-use super::{apply_menu_action, ButtonContainer, MenuButtonAction, MenuImages, MenuState, OnMainMenuScreen};
+use super::{apply_menu_action, ButtonContainer, MenuButtonAction, MenuState, OnMainMenuScreen};
 
 pub fn selection_option(app: &mut App) {
     app.add_systems(OnEnter(SystemState::Menu), setup_selection_option)
@@ -32,23 +32,20 @@ fn setup_selection_option(mut commands: Commands, asset_server: Res<AssetServer>
     commands
         .spawn((
             SelectionButton(MenuButtonAction::Play),
-            NodeBundle {
-                style: Style {
-                    display: Display::Flex,
-                    align_items: AlignItems::Center,
-                    justify_content: JustifyContent::Center,
-                    // column_gap: Val::Px(40.),
-                    height: Val::Percent(100.),
-                    width: Val::Percent(100.),
-                    top: Val::Px(-180.0),
-                    left: Val::Px(300.0),
-                    ..Default::default()
-                },
-                z_index: ZIndex::Global(i32::MAX),
-                visibility: Visibility::Hidden,
-                background_color: Color::srgba(0.2, 0.0, 0.1, 0.3).into(),
+            Node {
+                display: Display::Flex,
+                align_items: AlignItems::Center,
+                justify_content: JustifyContent::Center,
+                // column_gap: Val::Px(40.),
+                height: Val::Percent(100.),
+                width: Val::Percent(100.),
+                top: Val::Px(-180.0),
+                left: Val::Px(300.0),
                 ..Default::default()
             },
+            ZIndex(i32::MAX),
+            Visibility::Visible,
+            BackgroundColor(Color::srgba(0.2, 0.0, 0.1, 0.3)),
         ))
         .with_children(|parent| {
             let egg = asset_server.load("egg.png");
@@ -56,39 +53,39 @@ fn setup_selection_option(mut commands: Commands, asset_server: Res<AssetServer>
                 SelectedOptionEgg {
                     x_translation_anchor: 250.,
                 },
-                ImageBundle {
-                    image: UiImage {
-                        texture: egg.clone(),
-                        ..default()
-                    },
-                    style: Style {
-                        left: Val::Px(250.),
-                        height: Val::Px(80.),
-                        width: Val::Px(80.),
-                        ..Default::default()
-                    },
-                    visibility: Visibility::Visible,
-                    ..Default::default()
+                ImageNode::new(egg.clone()),
+                Node {
+                    left: Val::Px(250.),
+                    height: Val::Px(80.),
+                    width: Val::Px(80.),
+                    ..default()
                 },
+                Visibility::Visible,
+                // ImageBundle {
+                //     image: UiImage {
+                //         texture: ),
+                //         ..default()
+                //     },
+                // style: Style {
+                //     left: Val::Px(250.),
+                //     height: Val::Px(80.),
+                //     width: Val::Px(80.),
+                //     ..Default::default()
+                // },
+                // },
             ));
             parent.spawn((
                 SelectedOptionEgg {
                     x_translation_anchor: -250.,
                 },
-                ImageBundle {
-                    image: UiImage {
-                        texture: egg,
-                        ..default()
-                    },
-                    style: Style {
-                        left: Val::Px(-250.),
-                        height: Val::Px(80.),
-                        width: Val::Px(80.),
-                        ..Default::default()
-                    },
-                    visibility: Visibility::Visible,
-                    ..Default::default()
+                ImageNode::new(egg.clone()),
+                Node {
+                    left: Val::Px(-250.),
+                    height: Val::Px(80.),
+                    width: Val::Px(80.),
+                    ..default()
                 },
+                Visibility::Visible,
             ));
         });
 }
@@ -130,7 +127,7 @@ fn button_system_keyboard(
     game_state: ResMut<NextState<SystemState>>,
     mut selected_option: Query<&mut SelectionButton>,
     menu: Query<Entity, With<OnMainMenuScreen>>,
-    commands: Commands
+    commands: Commands,
 ) {
     if keys.just_pressed(KeyCode::Enter) || keys.just_pressed(KeyCode::Space) {
         apply_menu_action(
@@ -141,7 +138,7 @@ fn button_system_keyboard(
             game_state,
             selected_option,
             menu,
-            commands
+            commands,
         );
         return;
     }
@@ -189,7 +186,7 @@ fn selected_option_system(
     >,
     buttons_container: Query<&Transform, (Without<Button>, With<ButtonContainer>)>,
     mut selection_option: Query<
-        (&mut Style, &SelectionButton),
+        (&mut Node, &SelectionButton),
         (Without<Button>, Without<ButtonContainer>),
     >,
 ) {
@@ -206,25 +203,25 @@ fn selected_option_system(
 
                     match button_container_translation_x {
                         Some(x) => style.left = Val::Px(x + button_transform.translation.x),
-                        None => style.left = Val::Px(button_transform.translation.x)
+                        None => style.left = Val::Px(button_transform.translation.x),
                     }
                     // if let Some(x) = button_container_translation_x {
                     //     style.left = Val::Px(x + button_transform.translation.x);
                     // }
                     style.top = Val::Px(button_transform.translation.y);
-                    
+
                     bg_color.0 = HOVERED_BUTTON;
                 } else {
-                    bg_color.0 = NORMAL_BUTTON;    
+                    bg_color.0 = NORMAL_BUTTON;
                 }
             }
         });
 }
 
-fn animate_selected_option(time: Res<Time>, mut query: Query<(&mut Style, &SelectedOptionEgg)>) {
+fn animate_selected_option(time: Res<Time>, mut query: Query<(&mut Node, &SelectedOptionEgg)>) {
     for (mut style, egg) in &mut query {
         style.left = Val::Px(
-            egg.x_translation_anchor.signum() * 15.0 * f32::sin(time.elapsed_seconds() * 4.)
+            egg.x_translation_anchor.signum() * 15.0 * f32::sin(time.elapsed_secs() * 4.)
                 + egg.x_translation_anchor,
         );
     }
