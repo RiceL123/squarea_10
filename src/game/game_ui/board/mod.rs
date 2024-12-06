@@ -1,3 +1,4 @@
+use animate_tiles::StartTileAnimationEvent;
 use bevy::prelude::*;
 use bevy::sprite::Anchor;
 use conversions::area_to_transform;
@@ -17,8 +18,8 @@ pub fn board_plugin(app: &mut App) {
     app.add_systems(OnEnter(GameState::Playing), board_setup)
         .add_systems(OnExit(GameState::Playing), board_cleanup)
         .add_plugins((input::input_plugin, animate_tiles::animate_plugin))
-        // .add_observer(observe_poptiles_event);
-        .add_systems(Update, observe_poptiles_event);
+        .add_observer(observe_poptiles_event);
+        // .add_systems(Update, observe_poptiles_event);
 }
 
 #[derive(Component)]
@@ -177,8 +178,8 @@ fn board_cleanup(
 }
 
 fn observe_poptiles_event(
-    mut ev_reader: EventReader<TilesPoppedEvent>,
-    // trigger: Trigger<TilesPoppedEvent>,
+    trigger: Trigger<TilesPoppedEvent>,
+    // mut ev_writer: EventWriter<StartTileAnimationEvent>,
     // commands: Commands,
     internal_game_state: Res<InternalGameState>,
     config: Res<GameConfig>,
@@ -186,15 +187,17 @@ fn observe_poptiles_event(
 ) {
     // despawn popped tile information is just row and column info
     // must be converted to rendered entities where we inject an animation flag
-    // trigger.event().tiles.iter().for_each(|pos| {
-    //     commands.
-    // });
 
     // draw new prev area
-    for _ in ev_reader.read() {
-        if let Ok((mut prev_area_transform, mut prev_area_visibility)) = prev_area.get_single_mut() {
-            *prev_area_visibility = Visibility::Visible;
-            *prev_area_transform = area_to_transform(&internal_game_state.0.prev_area, &config);
-        }
+    // for _ in ev_reader.read() {
+    //     if let Ok((mut prev_area_transform, mut prev_area_visibility)) = prev_area.get_single_mut() {
+    //         *prev_area_visibility = Visibility::Visible;
+    //         *prev_area_transform = area_to_transform(&internal_game_state.0.prev_area, &config);
+    //     }
+    // }
+
+    if let Ok((mut prev_area_transform, mut prev_area_visibility)) = prev_area.get_single_mut() {
+        *prev_area_visibility = Visibility::Visible;
+        *prev_area_transform = area_to_transform(&internal_game_state.0.prev_area, &config);
     }
 }

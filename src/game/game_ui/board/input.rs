@@ -76,8 +76,8 @@ fn extend_rectangle(
 }
 
 fn close_rectangle(
-    ev_writer_poptiles : EventWriter<TilesPoppedEvent>,
-    // commands: Commands,
+    // ev_writer_poptiles : EventWriter<TilesPoppedEvent>,
+    mut commands: Commands,
     mut rectangle: Query<(&mut Visibility, &mut Transform), With<Rectangle>>,
     mut tiles: Query<(Entity, &Transform, &mut Sprite, &Tile), Without<Rectangle>>,
     mut internal_game_state: ResMut<InternalGameState>,
@@ -101,19 +101,25 @@ fn close_rectangle(
             return;
         }
 
+        let tile_positions = &tiles_selected
+            .iter()
+            .map(|(_, _, _, tile)| Position {
+                row: tile.row as usize,
+                col: tile.col as usize,
+            })
+            .collect();
+
         match internal_game_state.0.try_pop_tiles(
-            &tiles_selected
-                .iter()
-                .map(|(_, _, _, tile)| Position {
-                    row: tile.row as usize,
-                    col: tile.col as usize,
-                })
-                .collect(),
+            &tile_positions,
+            // ev_writer_poptiles,
             // commands,
-            ev_writer_poptiles
         ) {
             true => {
                 // set selected tiles to animating on popped state
+                commands.trigger(TilesPoppedEvent {
+                    tiles: tile_positions.to_vec(),
+                });
+
                 ev_writer.send(StartTileAnimationEvent(
                     tiles_selected
                         .iter()

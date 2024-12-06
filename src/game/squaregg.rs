@@ -126,7 +126,7 @@ impl Squaregg {
     pub fn try_pop_tiles(
         &mut self,
         tiles: &Vec<Position>,
-        mut ev: EventWriter<TilesPoppedEvent>,
+        // mut ev: EventWriter<TilesPoppedEvent>,
         // mut commands: Commands
     ) -> bool {
         let mut bounds = Area::default();
@@ -174,11 +174,7 @@ impl Squaregg {
 
                 self.prev_area = bounds.clone();
 
-                ev.send(TilesPoppedEvent {
-                    tiles: tiles.to_vec()
-                });
-
-                // commands.trigger(TilesPoppedEvent {
+                // ev.send(TilesPoppedEvent {
                 //     tiles: tiles.to_vec()
                 // });
 
